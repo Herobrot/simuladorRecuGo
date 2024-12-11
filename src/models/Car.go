@@ -1,35 +1,19 @@
 package models
 
-import (
-	"math/rand"
-	"time"
-)
-
 type Car struct {
-	ID        int
-	State     string
-	Spot      int
-	Image     string
-	Cancel    chan bool
-	observers []Observer
-	x, y      float64
+	ID     int
+	State  string
+	Spot   int
+	Image  string
+	Cancel chan bool
 }
 
 func NewCar(id int, image string) *Car {
-	modelPaths := []string{
-		"assets/img/carroCafe.png",
-		"assets/img/carroNaranja.png",
-		"assets/img/carroRojo.png",
-		"assets/img/carroVerde.png",
-	}
-	rand := (rand.NewSource(time.Now().UnixNano()))
-	image = modelPaths[rand.Int63()]
 	return &Car{
-		ID:        id,
-		Image:     image,
-		State:     "Waiting",
-		Cancel:    make(chan bool, 1),
-		observers: []Observer{},
+		ID:     id,
+		Image:  image,
+		State:  "Waiting",
+		Cancel: make(chan bool, 1),
 	}
 }
 
@@ -39,8 +23,4 @@ func (c *Car) GetId() int {
 
 func (c *Car) GetImage() string {
 	return c.Image
-}
-
-func (c *Car) Register(observer Observer) {
-	c.observers = append(c.observers, observer)
 }

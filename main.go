@@ -2,13 +2,15 @@ package main
 
 import (
 	"fmt"
-	application "simulador/App"
-	infrastructure "simulador/Infrestructure"
-	ui "simulador/UI"
 	"time"
+
+	application "main.go/src/App"
+	"main.go/src/controller"
+	ui "main.go/src/scenes"
 )
 
 func main() {
+	fmt.Println("main")
 	numVehicles := 100
 	timeout := 10 * time.Second
 	parkingLotService := application.NewParkingLotService(20, timeout)
@@ -20,6 +22,6 @@ func main() {
 		return
 	}
 
-	go infrastructure.StartParkingControl(parkingLotService, numVehicles)
+	go controller.StartParkingControl(parkingLotService, numVehicles)
 	ui.StartUI(parkingLotService)
 }

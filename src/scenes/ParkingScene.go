@@ -2,7 +2,7 @@ package ui
 
 import (
 	"fmt"
-	"simulador/src/models"
+	"image/color"
 	"sync"
 	"time"
 
@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	application "main.go/src/App"
 )
 
 const (
@@ -21,8 +22,8 @@ const (
 	gridCols      = 5
 	doorWidth     = 100
 	doorHeight    = 60
-	marginTop     = 80
-	marginLeft    = 100
+	marginTop     = 120
+	marginLeft    = 150
 	laneWidth     = 40
 	cornerRadius  = 5
 	animationStep = 50 * time.Millisecond
@@ -46,8 +47,8 @@ type ParkingUI struct {
 	spots         [gridSize]ParkingSpot
 	entryDoor     *fyne.Container
 	container     *fyne.Container
-	service       *models.ParkingLotService
-	updateChannel chan models.UpdateInfo
+	service       *application.ParkingLotService
+	updateChannel chan application.UpdateInfo
 	statusLabel   *widget.Label
 	app           fyne.App
 	window        fyne.Window
@@ -56,14 +57,14 @@ type ParkingUI struct {
 	spotMutex     sync.RWMutex
 }
 
-func (ui *ParkingUI) Update(info models.UpdateInfo) {
+func (ui *ParkingUI) Update(info application.UpdateInfo) {
 	ui.updateChannel <- info
 }
 
 func createCarWithContainer(filePath string) (*fyne.Container, *canvas.Image, error) {
 	carImg := canvas.NewImageFromFile(filePath)
 	carImg.FillMode = canvas.ImageFillOriginal
-	carImg.Resize(fyne.NewSize(40, 40))
+	carImg.Resize(fyne.NewSize(60, 60))
 
 	carContainer := container.NewWithoutLayout(carImg)
 	carContainer.Resize(fyne.NewSize(5, 5))
@@ -72,9 +73,9 @@ func createCarWithContainer(filePath string) (*fyne.Container, *canvas.Image, er
 }
 
 func createGradientDoor(isEntry bool) *fyne.Container {
-	doorColor := theme.PrimaryColor()
+	doorColor := color.RGBA{0, 204, 0, 255}
 	if !isEntry {
-		doorColor = theme.ErrorColor()
+		doorColor = color.RGBA{0, 0, 102, 255}
 	}
 
 	mainRect := canvas.NewRectangle(doorColor)
@@ -95,17 +96,36 @@ func createGradientDoor(isEntry bool) *fyne.Container {
 	return door
 }
 
-func NewParkingUI(service *models.ParkingLotService) *ParkingUI {
+func StartUI(service *application.ParkingLotService) {
+	parkingUI := NewParkingUI(service)
+	if parkingUI == nil {
+		return
+	}
+
+	service.RegisterObserver(parkingUI)
+
+	header := parkingUI.createHeader()
+	content := container.NewVBox(
+		header,
+		parkingUI.container,
+	)
+
+	parkingUI.window.SetContent(content)
+	go parkingUI.processUpdates()
+	parkingUI.window.ShowAndRun()
+}
+
+func NewParkingUI(service *application.ParkingLotService) *ParkingUI {
 	a := app.New()
 	w := a.NewWindow("Parking System")
-	w.SetFixedSize(true)
-	w.Resize(fyne.NewSize(800, 600))
+	w.SetFixedSize(false)
+	w.Resize(fyne.NewSize(600, 600))
 	ui := &ParkingUI{
 		service:       service,
 		window:        w,
 		container:     container.NewWithoutLayout(),
 		driveLanes:    make([]PathPoint, 0),
-		updateChannel: make(chan models.UpdateInfo, 100),
+		updateChannel: make(chan application.UpdateInfo, 100),
 	}
 
 	ui.initializeUI()
@@ -132,10 +152,10 @@ func (ui *ParkingUI) setupParkingSpots() {
 		col := i % gridCols
 
 		spot := &ui.spots[i]
-		spot.rect = canvas.NewRectangle(theme.DisabledButtonColor())
+		spot.rect = canvas.NewRectangle(color.RGBA{255, 255, 0, 255})
 		spot.rect.StrokeWidth = 1
 		spot.rect.StrokeColor = theme.PrimaryColor()
-		spot.rect.Resize(fyne.NewSize(cellSize-4, cellSize-4))
+		spot.rect.Resize(fyne.NewSize(cellSize-3, cellSize-3))
 
 		spot.position = fyne.NewPos(
 			float32(marginLeft+col*cellSize),
@@ -199,11 +219,13 @@ func (ui *ParkingUI) createDriveLanes() {
 func (ui *ParkingUI) drawDriveLanes() {
 	laneColor := theme.DisabledButtonColor()
 	mainLane := canvas.NewRectangle(laneColor)
-	mainLane.Resize(fyne.NewSize(float32(gridCols*cellSize+doorWidth), laneWidth))
+	mainLane.Resize(fyne.NewSize(float32(0.5*gridCols*cellSize), laneWidth))
 	mainLane.Move(fyne.NewPos(
 		float32(marginLeft/2+doorWidth/2),
 		float32(marginTop+cellSize*2+doorHeight/2-laneWidth/2),
 	))
+	mainLane.StrokeWidth = 5
+	mainLane.StrokeColor = color.RGBA{255, 255, 255, 255}
 	ui.container.Add(mainLane)
 	for col := 0; col < gridCols; col++ {
 		vertLane := canvas.NewRectangle(laneColor)
@@ -240,45 +262,26 @@ func (ui *ParkingUI) calculatePath(from, to fyne.Position) []PathPoint {
 	return path
 }
 
-func StartUI(service *models.ParkingLotService) {
-	parkingUI := NewParkingUI(service)
-	if parkingUI == nil {
-		return
-	}
-
-	service.RegisterObserver(parkingUI)
-
-	header := parkingUI.createHeader()
-	content := container.NewVBox(
-		header,
-		parkingUI.container,
-	)
-
-	parkingUI.window.SetContent(content)
-	go parkingUI.processUpdates()
-	parkingUI.window.ShowAndRun()
-}
-
 func (ui *ParkingUI) processUpdates() {
 	for update := range ui.updateChannel {
 		fmt.Println("Espera")
-		ui.safeUpdate(&update)
+		ui.safeUpdate(update)
 	}
 }
 
-func (ui *ParkingUI) safeUpdate(info *models.UpdateInfo) {
-	ui.spotMutex.Lock()
+func (ui *ParkingUI) safeUpdate(info application.UpdateInfo) {
 	defer ui.spotMutex.Unlock()
+	ui.spotMutex.Lock()
 
 	switch info.EventType {
 	case "CarParked":
 		ui.parkCar(info)
 	case "CarExiting":
-		ui.removeCar(*info)
+		ui.removeCar(info)
 	}
 }
 
-func (ui *ParkingUI) parkCar(info *models.UpdateInfo) {
+func (ui *ParkingUI) parkCar(info application.UpdateInfo) {
 	spot := ui.findAvailableSpot()
 	if spot == nil {
 		fmt.Println("No hay spots disponibles")
@@ -290,22 +293,21 @@ func (ui *ParkingUI) parkCar(info *models.UpdateInfo) {
 	spot.carContainer = carContainer
 	spot.carImage = carImage
 
-	spot.rect.FillColor = theme.PrimaryColor()
+	spot.rect.FillColor = color.RGBA64{0, 204, 0, 255}
 	spot.occupied = true
 
 	carContainer.Move(spot.position)
 	ui.container.Add(carContainer)
-	ui.window.Content().Refresh()
 
 	ui.updateStatusLabel()
 	spot.carContainer.Show()
 }
 
-func (ui *ParkingUI) removeCar(info models.UpdateInfo) {
+func (ui *ParkingUI) removeCar(info application.UpdateInfo) {
 	for i := range ui.spots {
 		spot := &ui.spots[i]
 		if spot.occupied && spot.carID == info.Car.GetId() {
-			spot.rect.FillColor = theme.DisabledButtonColor()
+			spot.rect.FillColor = color.RGBA{255, 255, 0, 255}
 			spot.occupied = false
 			if spot.carContainer != nil {
 				spot.carContainer.Hide()
