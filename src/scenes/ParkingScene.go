@@ -83,7 +83,7 @@ func StartUI(service *application.ParkingLotService) {
 
 func NewParkingUI(service *application.ParkingLotService) *ParkingUI {
 	a := app.New()
-	w := a.NewWindow("Parking System")
+	w := a.NewWindow("Estacionamiento")
 	w.SetFixedSize(false)
 	w.Resize(fyne.NewSize(600, 600))
 	ui := &ParkingUI{
@@ -92,7 +92,9 @@ func NewParkingUI(service *application.ParkingLotService) *ParkingUI {
 		container:     container.NewWithoutLayout(),
 		driveLanes:    make([]PathPoint, 0),
 		updateChannel: make(chan application.UpdateInfo, 100),
+		app:           a,
 	}
+	ui.window.CenterOnScreen()
 
 	ui.initializeUI()
 	return ui
@@ -204,30 +206,6 @@ func (ui *ParkingUI) drawDriveLanes() {
 	}
 }
 
-func (ui *ParkingUI) calculatePath(from, to fyne.Position) []PathPoint {
-	path := make([]PathPoint, 0)
-	path = append(path, PathPoint{from.X, from.Y})
-	mainLaneY := marginTop + cellSize*2 + doorHeight/2
-	if from.Y < float32(mainLaneY) {
-		path = append(path, PathPoint{from.X + cellSize/2, from.Y})
-		path = append(path, PathPoint{from.X + cellSize/2, float32(mainLaneY)})
-	} else {
-		path = append(path, PathPoint{from.X, float32(mainLaneY)})
-	}
-	targetX := to.X
-	if to.Y < float32(mainLaneY) {
-		targetX += cellSize / 2
-	}
-	path = append(path, PathPoint{targetX, float32(mainLaneY)})
-	if to.Y < float32(mainLaneY) {
-		path = append(path, PathPoint{targetX, to.Y})
-		path = append(path, PathPoint{to.X, to.Y})
-	} else {
-		path = append(path, PathPoint{to.X, to.Y})
-	}
-	return path
-}
-
 func (ui *ParkingUI) processUpdates() {
 	for update := range ui.updateChannel {
 		fmt.Println("Hay un update")
@@ -245,7 +223,7 @@ func (ui *ParkingUI) safeUpdate(info application.UpdateInfo) {
 	case "CarExiting":
 		ui.removeCar(info)
 	default:
-		ui.container.Refresh()
+		ui.updateStatusLabel()
 	}
 }
 
@@ -268,7 +246,6 @@ func (ui *ParkingUI) parkCar(info application.UpdateInfo) {
 	ui.container.Add(carContainer)
 
 	ui.updateStatusLabel()
-	spot.carContainer.Show()
 }
 
 func (ui *ParkingUI) removeCar(info application.UpdateInfo) {
@@ -287,13 +264,11 @@ func (ui *ParkingUI) removeCar(info application.UpdateInfo) {
 	}
 
 	ui.updateStatusLabel()
-	ui.container.Refresh()
 }
 
 func (ui *ParkingUI) updateStatusLabel() {
 	occupiedSpaces := ui.getOccupiedSpaces()
 	ui.statusLabel.SetText(fmt.Sprintf("Estado: %d/%d espacios ocupados", occupiedSpaces, gridSize))
-	ui.window.Content().Refresh()
 }
 
 func (ui *ParkingUI) findAvailableSpot() *ParkingSpot {

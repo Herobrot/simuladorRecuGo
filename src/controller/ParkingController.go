@@ -36,7 +36,7 @@ func StartParkingControl(service *application.ParkingLotService, numVehicles int
 			}
 
 			fmt.Printf("Generando vehículo %d\n", car.ID)
-			time.Sleep(time.Duration(rand.Intn(300)+3) * time.Millisecond)
+			time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
 			service.EnterParking(&car)
 			fmt.Printf("Vehiculo %d Entrando al lugar del parking.\n", car.ID)
 			wg.Add(1)
@@ -50,7 +50,7 @@ func StartParkingControl(service *application.ParkingLotService, numVehicles int
 		for vehicle := range exitChannel {
 			go func(v *models.Car) {
 				service.ExitParking(v)
-				time.Sleep(time.Duration(rand.Intn(3)+3) * time.Second)
+				time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
 				fmt.Printf("Vehicle %d Saliendo del  parking.\n", v.ID)
 				wg.Done()
 			}(vehicle)
