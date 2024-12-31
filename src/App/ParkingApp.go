@@ -68,7 +68,7 @@ func (ps *ParkingLotService) RemoveObserver(o Observer) {
 
 func (ps *ParkingLotService) notifyObservers(info UpdateInfo) {
 	defer ps.observerMutex.Unlock()
-	fmt.Printf("Notificando: Car %d - Estado: %s, Spot: %d, Tipo de Evento: %s\n", info.Car.ID, info.Spot, info.Car.Spot, info.EventType)
+	fmt.Printf("Notificando: Car %d - Estado: %d, Spot: %d, Tipo de Evento: %s\n", info.Car.ID, info.Spot, info.Car.Spot, info.EventType)
 
 	ps.observerMutex.Lock()
 	for _, observer := range ps.observers {
