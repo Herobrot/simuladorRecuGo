@@ -50,14 +50,14 @@ func NewParkingLotService(capacity int, timeout time.Duration) *ParkingLotServic
 }
 
 func (ps *ParkingLotService) RegisterObserver(o Observer) {
-	ps.observerMutex.Lock()
 	defer ps.observerMutex.Unlock()
+	ps.observerMutex.Lock()
 	ps.observers = append(ps.observers, o)
 }
 
 func (ps *ParkingLotService) RemoveObserver(o Observer) {
-	ps.observerMutex.Lock()
 	defer ps.observerMutex.Unlock()
+	ps.observerMutex.Lock()
 	for i, observer := range ps.observers {
 		if observer == o {
 			ps.observers = append(ps.observers[:i], ps.observers[i+1:]...)
@@ -67,19 +67,19 @@ func (ps *ParkingLotService) RemoveObserver(o Observer) {
 }
 
 func (ps *ParkingLotService) notifyObservers(info UpdateInfo) {
+	defer ps.observerMutex.Unlock()
 	fmt.Printf("Notificando: Car %d - Estado: %s, Spot: %d, Tipo de Evento: %s\n", info.Car.ID, info.Spot, info.Car.Spot, info.EventType)
 
 	ps.observerMutex.Lock()
-	defer ps.observerMutex.Unlock()
 	for _, observer := range ps.observers {
 		go observer.Update(info)
 	}
 }
 
 func (ps *ParkingLotService) EnterParking(car *models.Car) {
+	defer ps.spotAvailable.L.Unlock()
 	fmt.Printf("Car %d intentando  entrar\n", car.ID)
 	ps.spotAvailable.L.Lock()
-	defer ps.spotAvailable.L.Unlock()
 
 	if ps.ParkingLot.IsFull() {
 		ps.queueMutex.Lock()
@@ -108,8 +108,8 @@ func (ps *ParkingLotService) assignSpotAndEnter(car *models.Car) {
 }
 
 func (ps *ParkingLotService) ExitParking(car *models.Car) {
-	ps.spotAvailable.L.Lock()
 	defer ps.spotAvailable.L.Unlock()
+	ps.spotAvailable.L.Lock()
 
 	if !ps.ParkingLot.IsCarParked(car) {
 		fmt.Printf("Vehicle %d no puede salir: Lugar Invalido.\n", car.ID)
@@ -123,7 +123,7 @@ func (ps *ParkingLotService) ExitParking(car *models.Car) {
 }
 
 func (ps *ParkingLotService) GetEntryChannel() chan<- *models.Car {
-	fmt.Printf("Carro %d entrando al  parking \n")
+	fmt.Printf("El canal de entrada es: %v\n", ps.entryChannel)
 	return ps.entryChannel
 }
 

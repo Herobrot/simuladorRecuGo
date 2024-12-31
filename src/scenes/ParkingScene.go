@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	application "main.go/src/App"
+	"main.go/src/views"
 )
 
 const (
@@ -61,41 +62,6 @@ func (ui *ParkingUI) Update(info application.UpdateInfo) {
 	ui.updateChannel <- info
 }
 
-func createCarWithContainer(filePath string) (*fyne.Container, *canvas.Image, error) {
-	carImg := canvas.NewImageFromFile(filePath)
-	carImg.FillMode = canvas.ImageFillOriginal
-	carImg.Resize(fyne.NewSize(60, 60))
-
-	carContainer := container.NewWithoutLayout(carImg)
-	carContainer.Resize(fyne.NewSize(5, 5))
-
-	return carContainer, carImg, nil
-}
-
-func createGradientDoor(isEntry bool) *fyne.Container {
-	doorColor := color.RGBA{0, 204, 0, 255}
-	if !isEntry {
-		doorColor = color.RGBA{0, 0, 102, 255}
-	}
-
-	mainRect := canvas.NewRectangle(doorColor)
-	border := canvas.NewRectangle(theme.ShadowColor())
-	border.StrokeWidth = 2
-	border.StrokeColor = theme.ForegroundColor()
-
-	label := canvas.NewText(map[bool]string{true: "ENTRADA", false: "SALIDA"}[isEntry], theme.ForegroundColor())
-	label.TextSize = 12
-	label.TextStyle.Bold = true
-
-	door := container.NewWithoutLayout(mainRect, border, label)
-
-	mainRect.Resize(fyne.NewSize(doorWidth, doorHeight))
-	border.Resize(fyne.NewSize(doorWidth, doorHeight))
-	label.Move(fyne.NewPos(doorWidth/4, doorHeight/3))
-
-	return door
-}
-
 func StartUI(service *application.ParkingLotService) {
 	parkingUI := NewParkingUI(service)
 	if parkingUI == nil {
@@ -140,7 +106,7 @@ func (ui *ParkingUI) initializeUI() {
 	ui.setupParkingSpots()
 	ui.drawDriveLanes()
 
-	ui.entryDoor = createGradientDoor(true)
+	ui.entryDoor = views.CreateGradientDoor(true)
 	entryPos := fyne.NewPos(float32(marginLeft/2), float32(marginTop+cellSize*2))
 	ui.entryDoor.Move(entryPos)
 	ui.container.Add(ui.entryDoor)
@@ -264,7 +230,7 @@ func (ui *ParkingUI) calculatePath(from, to fyne.Position) []PathPoint {
 
 func (ui *ParkingUI) processUpdates() {
 	for update := range ui.updateChannel {
-		fmt.Println("Espera")
+		fmt.Println("Hay un update")
 		ui.safeUpdate(update)
 	}
 }
@@ -278,6 +244,8 @@ func (ui *ParkingUI) safeUpdate(info application.UpdateInfo) {
 		ui.parkCar(info)
 	case "CarExiting":
 		ui.removeCar(info)
+	default:
+		ui.container.Refresh()
 	}
 }
 
@@ -289,7 +257,7 @@ func (ui *ParkingUI) parkCar(info application.UpdateInfo) {
 	}
 
 	spot.carID = info.Car.GetId()
-	carContainer, carImage, _ := createCarWithContainer(info.Car.GetImage())
+	carContainer, carImage, _ := views.CreateCarWithContainer(info.Car.GetImage())
 	spot.carContainer = carContainer
 	spot.carImage = carImage
 
