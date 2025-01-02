@@ -46,6 +46,7 @@ type ParkingSpot struct {
 
 type ParkingUI struct {
 	spots         [gridSize]ParkingSpot
+	counterSpots  int
 	entryDoor     *fyne.Container
 	container     *fyne.Container
 	service       *application.ParkingLotService
@@ -93,6 +94,7 @@ func NewParkingUI(service *application.ParkingLotService) *ParkingUI {
 		driveLanes:    make([]PathPoint, 0),
 		updateChannel: make(chan application.UpdateInfo, 100),
 		app:           a,
+		counterSpots:  0,
 	}
 	ui.window.CenterOnScreen()
 
@@ -157,16 +159,6 @@ func (ui *ParkingUI) createHeader() *fyne.Container {
 	)
 
 	return headerContainer
-}
-
-func (ui *ParkingUI) getOccupiedSpaces() int {
-	occupied := 0
-	for i := 0; i < gridSize; i++ {
-		if ui.spots[i].occupied {
-			occupied++
-		}
-	}
-	return occupied
 }
 
 func (ui *ParkingUI) createDriveLanes() {
@@ -244,7 +236,11 @@ func (ui *ParkingUI) parkCar(info application.UpdateInfo) {
 
 	carContainer.Move(spot.position)
 	ui.container.Add(carContainer)
+	fmt.Println("[Added-Before] Spot: ", ui.counterSpots)
+	ui.counterSpots++
+	fmt.Println("[Added-After] Spot: ", ui.counterSpots)
 
+	ui.window.Content().Refresh()
 	ui.updateStatusLabel()
 }
 
@@ -258,17 +254,21 @@ func (ui *ParkingUI) removeCar(info application.UpdateInfo) {
 				spot.carContainer.Hide()
 				ui.container.Remove(spot.carContainer)
 				spot.carContainer = nil
+				fmt.Println("[Removed-Before] Spot: ", ui.counterSpots)
+				ui.counterSpots--
+				fmt.Println("[Removed-After] Spot: ", ui.counterSpots)
 			}
 			break
 		}
 	}
-
+	ui.window.Content().Refresh()
 	ui.updateStatusLabel()
 }
 
 func (ui *ParkingUI) updateStatusLabel() {
-	occupiedSpaces := ui.getOccupiedSpaces()
-	ui.statusLabel.SetText(fmt.Sprintf("Estado: %d/%d espacios ocupados", occupiedSpaces, gridSize))
+	fmt.Println("[LABEL] Actualizando estado")
+	ui.statusLabel.SetText(fmt.Sprintf("Estado: %d/%d espacios ocupados", ui.counterSpots, gridSize))
+	fmt.Println("[LABEL] Estado actualizado")
 }
 
 func (ui *ParkingUI) findAvailableSpot() *ParkingSpot {

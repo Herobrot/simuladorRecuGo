@@ -188,8 +188,8 @@ func (ps *ParkingLotService) removeFromQueue(car *models.Car) {
 }
 
 func (ps *ParkingLotService) isCarInQueue(car *models.Car) bool {
-	ps.queueMutex.Lock()
 	defer ps.queueMutex.Unlock()
+	ps.queueMutex.Lock()
 	for _, c := range ps.entryQueue {
 		if c.ID == car.ID {
 			return true
