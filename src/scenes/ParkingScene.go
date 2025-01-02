@@ -240,7 +240,6 @@ func (ui *ParkingUI) parkCar(info application.UpdateInfo) {
 	ui.counterSpots++
 	fmt.Println("[Added-After] Spot: ", ui.counterSpots)
 
-	ui.window.Content().Refresh()
 	ui.updateStatusLabel()
 }
 
@@ -261,13 +260,15 @@ func (ui *ParkingUI) removeCar(info application.UpdateInfo) {
 			break
 		}
 	}
-	ui.window.Content().Refresh()
 	ui.updateStatusLabel()
 }
 
 func (ui *ParkingUI) updateStatusLabel() {
 	fmt.Println("[LABEL] Actualizando estado")
 	ui.statusLabel.SetText(fmt.Sprintf("Estado: %d/%d espacios ocupados", ui.counterSpots, gridSize))
+	currentSize := ui.window.Canvas().Size()
+	ui.window.Resize(fyne.NewSize(currentSize.Width+1, currentSize.Height))
+	ui.window.Resize(currentSize)
 	fmt.Println("[LABEL] Estado actualizado")
 }
 
